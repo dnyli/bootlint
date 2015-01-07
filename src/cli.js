@@ -17,8 +17,9 @@ program
         return val.split(',');
     })
     .parse(process.argv);
-var disabledIds = program.disable === undefined ? [] : program.disable;
 
+var disabledIds = program.disable === undefined ? [] : program.disable;
+var usedDash = program.args[program.args.length - 1] === '-' && program.args.pop();
 var totalErrCount = 0;
 var totalFileCount = 0;
 var lintedFiles = [];
@@ -44,7 +45,7 @@ function buildReporter(origin) {
 
 function handleStdin() {
     return new Deferred(function (resolve) {
-        if (typeof process.stdin.isTTY !== 'boolean' || process.stdin.isTTY) {
+        if (process.stdin.isTTY) {
             return resolve();
         }
 
@@ -79,11 +80,15 @@ function handlePath(pattern) {
         });
 }
 
+if (!program.args.length || usedDash) {
+    lintedFiles.push(handleStdin());
+}
+
 program.args.forEach(function (pattern) {
     lintedFiles.push(handlePath(pattern));
 });
 
-Deferred.join(handleStdin(), Deferred.all(lintedFiles)).then(function () {
+Deferred.all(lintedFiles).then(function () {
     console.log("");
 
     if (totalErrCount > 0) {
